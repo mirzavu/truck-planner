@@ -1,6 +1,8 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { ConfigProvider, DatePicker } from 'antd'
+import dayjs from 'dayjs'
 
 import { fetchTripPlan } from './api'
 import type { DailyLog, DutyStatus, Stop, TripPlanResponse } from './types'
@@ -124,7 +126,7 @@ function DailyLogSheet({ log }: { log: DailyLog }) {
   }, [log])
 
   return (
-    <article className="border border-[#132a38]/10 rounded-2xl bg-[#fffcf5] p-4 flex flex-col gap-3 min-w-[320px] snap-center">
+    <article id={`log-${log.date}`} className="border border-[#132a38]/10 rounded-2xl bg-[#fffcf5] p-4 flex flex-col gap-3 min-w-[320px] snap-center">
       <header className="flex justify-between items-start">
         <div>
           <p className="text-[10px] font-bold text-[#0a4f5f] uppercase tracking-wider mb-1">Daily log</p>
@@ -194,157 +196,179 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f3e8] text-[#132a38] font-sans p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-gradient-to-br from-[#fff8ea] to-[#fcf3dc] p-8 rounded-[28px] border border-[#132a38]/10 shadow-sm relative overflow-hidden">
-            <div className="absolute inset-4 border border-dashed border-[#0a4f5f]/20 rounded-2xl pointer-events-none" />
-            <p className="text-[#0a4f5f] text-xs font-bold uppercase tracking-widest mb-3 relative z-10">Truck HOS planner</p>
-            <h1 className="font-serif text-4xl md:text-5xl font-bold leading-tight mb-4 text-[#132a38] relative z-10 max-w-lg">Plan the run. Surface the stops. Draw the logbook.</h1>
-            <p className="text-gray-700 max-w-xl relative z-10">Enter the current location, pickup, dropoff, and cycle usage. The app generates a route, stop timeline, turn instructions, and filled daily paper logs.</p>
-          </div>
-          <div className="bg-gradient-to-br from-[#0a4f5f] to-[#122531] p-8 rounded-[28px] text-[#f6efe0] shadow-md flex flex-col justify-center">
-            <p className="text-[#f6efe0]/70 text-xs font-bold uppercase tracking-widest mb-6">Assessment defaults</p>
-            <div className="grid grid-cols-2 gap-6">
-              <div><strong className="block text-3xl font-bold mb-1">70 / 8</strong><span className="text-sm text-[#f6efe0]/70">cycle</span></div>
-              <div><strong className="block text-3xl font-bold mb-1">11h</strong><span className="text-sm text-[#f6efe0]/70">drive max</span></div>
-              <div><strong className="block text-3xl font-bold mb-1">14h</strong><span className="text-sm text-[#f6efe0]/70">window</span></div>
-              <div><strong className="block text-3xl font-bold mb-1">1k mi</strong><span className="text-sm text-[#f6efe0]/70">fuel cadence</span></div>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#d44b2c',
+          borderRadius: 12,
+          fontFamily: 'Space Grotesk, sans-serif',
+          colorBgContainer: '#fffcf5',
+        },
+        components: {
+          Calendar: {
+            itemActiveBg: 'rgba(212, 75, 44, 0.1)',
+          }
+        }
+      }}
+    >
+      <div className="min-h-screen bg-[#f8f3e8] text-[#132a38] font-sans p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-gradient-to-br from-[#fff8ea] to-[#fcf3dc] p-8 rounded-[28px] border border-[#132a38]/10 shadow-sm relative overflow-hidden">
+              <div className="absolute inset-4 border border-dashed border-[#0a4f5f]/20 rounded-2xl pointer-events-none" />
+              <p className="text-[#0a4f5f] text-xs font-bold uppercase tracking-widest mb-3 relative z-10">Truck HOS planner</p>
+              <h1 className="font-serif text-4xl md:text-5xl font-bold leading-tight mb-4 text-[#132a38] relative z-10 max-w-lg">Plan the run. Surface the stops. Draw the logbook.</h1>
+              <p className="text-gray-700 max-w-xl relative z-10">Enter the current location, pickup, dropoff, and cycle usage. The app generates a route, stop timeline, turn instructions, and filled daily paper logs.</p>
             </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 bg-white/80 backdrop-blur-sm p-6 rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Trip inputs</p>
-                <h2 className="font-serif text-2xl font-bold text-[#132a38]">Build a trip plan</h2>
+            <div className="bg-gradient-to-br from-[#0a4f5f] to-[#122531] p-8 rounded-[28px] text-[#f6efe0] shadow-md flex flex-col justify-center">
+              <p className="text-[#f6efe0]/70 text-xs font-bold uppercase tracking-widest mb-6">Assessment defaults</p>
+              <div className="grid grid-cols-2 gap-6">
+                <div><strong className="block text-3xl font-bold mb-1">70 / 8</strong><span className="text-sm text-[#f6efe0]/70">cycle</span></div>
+                <div><strong className="block text-3xl font-bold mb-1">11h</strong><span className="text-sm text-[#f6efe0]/70">drive max</span></div>
+                <div><strong className="block text-3xl font-bold mb-1">14h</strong><span className="text-sm text-[#f6efe0]/70">window</span></div>
+                <div><strong className="block text-3xl font-bold mb-1">1k mi</strong><span className="text-sm text-[#f6efe0]/70">fuel cadence</span></div>
               </div>
-              <button type="button" onClick={() => setFormData(demoRequest)} className="text-xs font-semibold px-4 py-2 rounded-full border border-[#132a38]/20 hover:bg-black/5 transition-colors">Load demo</button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
-              <label className="block text-sm font-semibold text-[#132a38]">Current location
-                <input required value={formData.currentLocation} onChange={e => setFormData(c => ({...c, currentLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
-              </label>
-              <label className="block text-sm font-semibold text-[#132a38]">Pickup location
-                <input required value={formData.pickupLocation} onChange={e => setFormData(c => ({...c, pickupLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
-              </label>
-              <label className="block text-sm font-semibold text-[#132a38]">Dropoff location
-                <input required value={formData.dropoffLocation} onChange={e => setFormData(c => ({...c, dropoffLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <label className="block text-sm font-semibold text-[#132a38]">Cycle used
-                  <input required type="number" min="0" max="70" step="0.25" value={formData.cycleUsedHours} onChange={e => setFormData(c => ({...c, cycleUsedHours: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
-                </label>
-                <label className="block text-sm font-semibold text-[#132a38]">Trip start
-                  <input type="datetime-local" value={formData.startAt} onChange={e => setFormData(c => ({...c, startAt: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
-                </label>
-              </div>
-              <div className="pt-4 mt-auto">
-                <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-[#d44b2c] to-[#0a4f5f] text-[#fff6ea] font-bold py-3.5 px-6 rounded-full hover:opacity-90 transition-opacity disabled:opacity-60">
-                  {isLoading ? 'Planning trip...' : 'Generate trip'}
-                </button>
-                {error && <p className="mt-4 text-sm text-red-800 bg-red-100 p-3 rounded-xl">{error}</p>}
-              </div>
-            </form>
-          </div>
+          </section>
 
-          <div className="lg:col-span-7 space-y-6 flex flex-col">
-            <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[24px] border border-[#132a38]/10 shadow-sm">
-              <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Trip summary</p>
-              <h2 className="font-serif text-2xl font-bold text-[#132a38] mb-6">Dispatch snapshot</h2>
-              {deferredPlan ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Miles</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalDistanceMiles}</strong></div>
-                    <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Drive hours</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalDriveHours}</strong></div>
-                    <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">On-duty hours</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalOnDutyHours}</strong></div>
-                    <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Cycle end</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.cycleHoursEnd}</strong></div>
-                  </div>
-                  <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div><span className="text-xs text-gray-500 block">Start</span><strong className="text-sm font-bold text-[#132a38]">{formatDate(deferredPlan.trip.startAt, deferredPlan.trip.timezone)}</strong></div>
-                    <div><span className="text-xs text-gray-500 block">Finish</span><strong className="text-sm font-bold text-[#132a38]">{formatDate(deferredPlan.trip.endAt, deferredPlan.trip.timezone)}</strong></div>
-                    <div><span className="text-xs text-gray-500 block">Logs</span><strong className="text-sm font-bold text-[#132a38]">{deferredPlan.trip.days} day(s)</strong></div>
-                  </div>
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-5 bg-white/80 backdrop-blur-sm p-6 rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Trip inputs</p>
+                  <h2 className="font-serif text-2xl font-bold text-[#132a38]">Build a trip plan</h2>
                 </div>
-              ) : (
-                <p className="text-gray-500 text-sm">Generate a trip to populate the route map, stop sequence, and daily logs.</p>
+                <button type="button" onClick={() => setFormData(demoRequest)} className="text-xs font-semibold px-4 py-2 rounded-full border border-[#132a38]/20 hover:bg-black/5 transition-colors">Load demo</button>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
+                <label className="block text-sm font-semibold text-[#132a38]">Current location
+                  <input required value={formData.currentLocation} onChange={e => setFormData(c => ({...c, currentLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                </label>
+                <label className="block text-sm font-semibold text-[#132a38]">Pickup location
+                  <input required value={formData.pickupLocation} onChange={e => setFormData(c => ({...c, pickupLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                </label>
+                <label className="block text-sm font-semibold text-[#132a38]">Dropoff location
+                  <input required value={formData.dropoffLocation} onChange={e => setFormData(c => ({...c, dropoffLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block text-sm font-semibold text-[#132a38]">Cycle used
+                    <input required type="number" min="0" max="70" step="0.25" value={formData.cycleUsedHours} onChange={e => setFormData(c => ({...c, cycleUsedHours: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                  </label>
+                  <label className="block text-sm font-semibold text-[#132a38]">Trip start
+                    <DatePicker 
+                      className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2 bg-white focus:outline-none transition-all"
+                      showTime 
+                      format="MM/DD/YYYY, hh:mm A" 
+                      value={formData.startAt ? dayjs(formData.startAt) : null}
+                      onChange={(date) => setFormData(c => ({...c, startAt: date ? date.toISOString() : ''}))}
+                    />
+                  </label>
+                </div>
+                <div className="pt-4 mt-auto">
+                  <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-[#d44b2c] to-[#0a4f5f] text-[#fff6ea] font-bold py-3.5 px-6 rounded-full hover:opacity-90 transition-opacity disabled:opacity-60">
+                    {isLoading ? 'Planning trip...' : 'Generate trip'}
+                  </button>
+                  {error && <p className="mt-4 text-sm text-red-800 bg-red-100 p-3 rounded-xl">{error}</p>}
+                </div>
+              </form>
+            </div>
+
+            <div className="lg:col-span-7 space-y-6 flex flex-col">
+              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-[24px] border border-[#132a38]/10 shadow-sm">
+                <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Trip summary</p>
+                <h2 className="font-serif text-2xl font-bold text-[#132a38] mb-6">Dispatch snapshot</h2>
+                {deferredPlan ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Miles</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalDistanceMiles}</strong></div>
+                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Drive hours</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalDriveHours}</strong></div>
+                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">On-duty hours</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalOnDutyHours}</strong></div>
+                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Cycle end</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.cycleHoursEnd}</strong></div>
+                    </div>
+                    <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div><span className="text-xs text-gray-500 block">Start</span><strong className="text-sm font-bold text-[#132a38]">{formatDate(deferredPlan.trip.startAt, deferredPlan.trip.timezone)}</strong></div>
+                      <div><span className="text-xs text-gray-500 block">Finish</span><strong className="text-sm font-bold text-[#132a38]">{formatDate(deferredPlan.trip.endAt, deferredPlan.trip.timezone)}</strong></div>
+                      <div><span className="text-xs text-gray-500 block">Logs</span><strong className="text-sm font-bold text-[#132a38]">{deferredPlan.trip.days} day(s)</strong></div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">Generate a trip to populate the route map, stop sequence, and daily logs.</p>
+                )}
+              </div>
+
+              {deferredPlan && (
+                <div className="bg-white/80 backdrop-blur-sm p-4 rounded-[24px] border border-[#132a38]/10 shadow-sm flex-1 min-h-[300px]">
+                  <RouteMap route={deferredPlan.route} stops={deferredPlan.stops} />
+                </div>
               )}
             </div>
+          </section>
 
-            {deferredPlan && (
-              <div className="bg-white/80 backdrop-blur-sm p-4 rounded-[24px] border border-[#132a38]/10 shadow-sm flex-1 min-h-[300px]">
-                <RouteMap route={deferredPlan.route} stops={deferredPlan.stops} />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {deferredPlan && (
-          <>
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[450px]">
-                <div className="p-6 border-b border-[#132a38]/5 shrink-0">
-                  <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Stop timeline</p>
-                  <h2 className="font-serif text-2xl font-bold text-[#132a38]">Duty-status changes</h2>
+          {deferredPlan && (
+            <>
+              <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[450px]">
+                  <div className="p-6 border-b border-[#132a38]/5 shrink-0">
+                    <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Stop timeline</p>
+                    <h2 className="font-serif text-2xl font-bold text-[#132a38]">Duty-status changes</h2>
+                  </div>
+                  <div className="overflow-y-auto p-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
+                    {deferredPlan.stops.map((stop) => (
+                      <div key={`${stop.type}-${stop.arrivalAt}`} className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 flex items-center gap-4">
+                        <div className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${['pickup', 'dropoff'].includes(stop.type) ? 'bg-[#0a4f5f]/10 text-[#0a4f5f]' : 'bg-[#d44b2c]/10 text-[#d44b2c]'}`}>
+                          {stop.type}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <strong className="block text-[#132a38] truncate">{stop.label}</strong>
+                          <p className="text-xs text-gray-500 truncate">{stop.locationName}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="block text-sm text-[#132a38] font-medium">{formatDate(stop.arrivalAt, deferredPlan.trip.timezone)}</span>
+                          <span className="block text-xs text-gray-500">{stopSummary(stop)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="overflow-y-auto p-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
-                  {deferredPlan.stops.map((stop) => (
-                    <div key={`${stop.type}-${stop.arrivalAt}`} className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 flex items-center gap-4">
-                      <div className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${['pickup', 'dropoff'].includes(stop.type) ? 'bg-[#0a4f5f]/10 text-[#0a4f5f]' : 'bg-[#d44b2c]/10 text-[#d44b2c]'}`}>
-                        {stop.type}
+
+                <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[450px]">
+                  <div className="p-6 border-b border-[#132a38]/5 shrink-0">
+                    <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Route instructions</p>
+                    <h2 className="font-serif text-2xl font-bold text-[#132a38]">Turn-by-turn highlights</h2>
+                  </div>
+                  <div className="overflow-y-auto p-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
+                    {flattenedSteps.map((step) => (
+                      <div key={step.key} className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <strong className="block text-[#132a38] text-sm">{step.instruction}</strong>
+                          <p className="text-xs text-gray-500 truncate mt-0.5">{step.leg}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="block text-sm font-semibold text-[#132a38]">{step.distanceMiles} mi</span>
+                          <span className="block text-xs text-gray-500">{step.durationMinutes} min</span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <strong className="block text-[#132a38] truncate">{stop.label}</strong>
-                        <p className="text-xs text-gray-500 truncate">{stop.locationName}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="block text-sm text-[#132a38] font-medium">{formatDate(stop.arrivalAt, deferredPlan.trip.timezone)}</span>
-                        <span className="block text-xs text-gray-500">{stopSummary(stop)}</span>
-                      </div>
-                    </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section className="bg-white/80 backdrop-blur-sm p-6 rounded-[24px] border border-[#132a38]/10 shadow-sm">
+                <div className="mb-6">
+                  <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Daily paper logs</p>
+                  <h2 className="font-serif text-2xl font-bold text-[#132a38]">Rendered log sheets</h2>
+                </div>
+                <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-300">
+                  {deferredPlan.dailyLogs.map((log) => (
+                    <DailyLogSheet key={log.date} log={log} />
                   ))}
                 </div>
-              </div>
-
-              <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[450px]">
-                <div className="p-6 border-b border-[#132a38]/5 shrink-0">
-                  <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Route instructions</p>
-                  <h2 className="font-serif text-2xl font-bold text-[#132a38]">Turn-by-turn highlights</h2>
-                </div>
-                <div className="overflow-y-auto p-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
-                  {flattenedSteps.map((step) => (
-                    <div key={step.key} className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <strong className="block text-[#132a38] text-sm">{step.instruction}</strong>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">{step.leg}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="block text-sm font-semibold text-[#132a38]">{step.distanceMiles} mi</span>
-                        <span className="block text-xs text-gray-500">{step.durationMinutes} min</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-white/80 backdrop-blur-sm p-6 rounded-[24px] border border-[#132a38]/10 shadow-sm">
-              <div className="mb-6">
-                <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Daily paper logs</p>
-                <h2 className="font-serif text-2xl font-bold text-[#132a38]">Rendered log sheets</h2>
-              </div>
-              <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-300">
-                {deferredPlan.dailyLogs.map((log) => (
-                  <DailyLogSheet key={log.date} log={log} />
-                ))}
-              </div>
-            </section>
-          </>
-        )}
+              </section>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </ConfigProvider>
   )
 }
