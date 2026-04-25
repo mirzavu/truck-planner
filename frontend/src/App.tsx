@@ -1,7 +1,7 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { ConfigProvider, DatePicker } from 'antd'
+import { ConfigProvider, DatePicker, Modal } from 'antd'
 import dayjs from 'dayjs'
 
 import { fetchTripPlan } from './api'
@@ -97,6 +97,8 @@ const ROW_Y: Record<DutyStatus, number> = {
 }
 
 function DailyLogSheet({ log }: { log: DailyLog }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   const dateParts = useMemo(() => {
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: log.timezone, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -125,41 +127,71 @@ function DailyLogSheet({ log }: { log: DailyLog }) {
     return points.join(' ')
   }, [log])
 
+  const LogGraphic = (
+    <div className="relative w-full aspect-[513/518] bg-contain bg-no-repeat bg-center" style={{ backgroundImage: 'url(/blank-paper-log.png)' }}>
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 513 518">
+        <text className="text-[11px] font-semibold fill-[#11242d]" x="265" y="25">{dateParts.month}</text>
+        <text className="text-[11px] font-semibold fill-[#11242d]" x="312" y="25">{dateParts.day}</text>
+        <text className="text-[11px] font-semibold fill-[#11242d]" x="359" y="25">{dateParts.year}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="84" y="85">{log.totalMiles.toFixed(0)}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="85">{log.header.carrierName}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="101">{log.header.mainOfficeAddress.slice(0, 38)}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="116">{log.header.homeTerminalAddress.slice(0, 38)}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="76" y="117">{log.header.truckNumber}/{log.header.trailerNumber}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="28" y="365">{log.header.shippingDocument}</text>
+        <path d={path} fill="none" stroke="#1670b8" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="184">{log.dutyTotals.offDuty}</text>
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="205">{log.dutyTotals.sleeperBerth}</text>
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="226">{log.dutyTotals.driving}</text>
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="247">{log.dutyTotals.onDutyNotDriving}</text>
+        {log.remarks.slice(0, 5).map((remark, i) => (
+          <text key={i} className="text-[7px] fill-[#11242d]" x="28" y={394 + i * 16}>
+            {new Intl.DateTimeFormat('en-US', { timeZone: log.timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(remark.at))} {remark.label.slice(0, 62)}
+          </text>
+        ))}
+      </svg>
+    </div>
+  )
+
   return (
-    <article id={`log-${log.date}`} className="border border-[#132a38]/10 rounded-2xl bg-[#fffcf5] p-4 flex flex-col gap-3 min-w-[320px] snap-center">
-      <header className="flex justify-between items-start">
-        <div>
-          <p className="text-[10px] font-bold text-[#0a4f5f] uppercase tracking-wider mb-1">Daily log</p>
-          <h3 className="font-serif text-[#132a38] text-xl font-bold">{log.date}</h3>
+    <>
+      <article id={`log-${log.date}`} className="border border-[#132a38]/10 rounded-2xl bg-[#fffcf5] p-4 flex flex-col gap-3 min-w-[320px] snap-center">
+        <header className="flex justify-between items-start">
+          <div>
+            <p className="text-[10px] font-bold text-[#0a4f5f] uppercase tracking-wider mb-1">Daily log</p>
+            <h3 className="font-serif text-[#132a38] text-xl font-bold">{log.date}</h3>
+          </div>
+          <div className="text-xs text-gray-500">{log.timezone}</div>
+        </header>
+        <div 
+          className="p-1.5 rounded-xl bg-gradient-to-b from-[#fff8ea] to-[#f6eacc] cursor-pointer hover:shadow-md transition-all group"
+          onClick={() => setIsExpanded(true)}
+        >
+          <div className="relative overflow-hidden rounded-lg">
+            {LogGraphic}
+            <div className="absolute inset-0 bg-[#d44b2c]/0 group-hover:bg-[rgba(212,75,44,0.15)] transition-colors flex items-center justify-center">
+               <span className="opacity-0 group-hover:opacity-100 bg-white/95 text-[#132a38] text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 transform scale-95 group-hover:scale-100">
+                 Click to enlarge
+               </span>
+            </div>
+          </div>
         </div>
-        <div className="text-xs text-gray-500">{log.timezone}</div>
-      </header>
-      <div className="p-1.5 rounded-xl bg-gradient-to-b from-[#fff8ea] to-[#f6eacc]">
-        <div className="relative w-full aspect-[513/518] bg-contain bg-no-repeat bg-center" style={{ backgroundImage: 'url(/blank-paper-log.png)' }}>
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 513 518">
-            <text className="text-[11px] font-semibold fill-[#11242d]" x="265" y="25">{dateParts.month}</text>
-            <text className="text-[11px] font-semibold fill-[#11242d]" x="312" y="25">{dateParts.day}</text>
-            <text className="text-[11px] font-semibold fill-[#11242d]" x="359" y="25">{dateParts.year}</text>
-            <text className="text-[8px] font-semibold fill-[#11242d]" x="84" y="85">{log.totalMiles.toFixed(0)}</text>
-            <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="85">{log.header.carrierName}</text>
-            <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="101">{log.header.mainOfficeAddress.slice(0, 38)}</text>
-            <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="116">{log.header.homeTerminalAddress.slice(0, 38)}</text>
-            <text className="text-[8px] font-semibold fill-[#11242d]" x="76" y="117">{log.header.truckNumber}/{log.header.trailerNumber}</text>
-            <text className="text-[8px] font-semibold fill-[#11242d]" x="28" y="365">{log.header.shippingDocument}</text>
-            <path d={path} fill="none" stroke="#1670b8" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-            <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="184">{log.dutyTotals.offDuty}</text>
-            <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="205">{log.dutyTotals.sleeperBerth}</text>
-            <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="226">{log.dutyTotals.driving}</text>
-            <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="247">{log.dutyTotals.onDutyNotDriving}</text>
-            {log.remarks.slice(0, 5).map((remark, i) => (
-              <text key={i} className="text-[7px] fill-[#11242d]" x="28" y={394 + i * 16}>
-                {new Intl.DateTimeFormat('en-US', { timeZone: log.timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(remark.at))} {remark.label.slice(0, 62)}
-              </text>
-            ))}
-          </svg>
+      </article>
+
+      <Modal 
+        open={isExpanded} 
+        onCancel={() => setIsExpanded(false)} 
+        footer={null} 
+        width="90vw"
+        style={{ maxWidth: 800 }}
+        centered
+        title={<span className="font-serif text-xl border-none">Daily Log: {log.date}</span>}
+      >
+        <div className="mt-4 p-2 md:p-6 bg-[#fffcf5] rounded-xl border border-[#132a38]/10 pointer-events-none">
+          {LogGraphic}
         </div>
-      </div>
-    </article>
+      </Modal>
+    </>
   )
 }
 
@@ -308,15 +340,15 @@ export default function App() {
           {deferredPlan && (
             <>
               <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[450px]">
+                <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[480px] pb-4">
                   <div className="p-6 border-b border-[#132a38]/5 shrink-0">
                     <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Stop timeline</p>
                     <h2 className="font-serif text-2xl font-bold text-[#132a38]">Duty-status changes</h2>
                   </div>
-                  <div className="overflow-y-auto p-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
+                  <div className="overflow-y-auto px-4 pt-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
                     {deferredPlan.stops.map((stop) => (
                       <div key={`${stop.type}-${stop.arrivalAt}`} className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 flex items-center gap-4">
-                        <div className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${['pickup', 'dropoff'].includes(stop.type) ? 'bg-[#0a4f5f]/10 text-[#0a4f5f]' : 'bg-[#d44b2c]/10 text-[#d44b2c]'}`}>
+                        <div className={`w-28 shrink-0 text-center py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${['pickup', 'dropoff'].includes(stop.type) ? 'bg-[#0a4f5f]/10 text-[#0a4f5f]' : 'bg-[#d44b2c]/10 text-[#d44b2c]'}`}>
                           {stop.type}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -332,12 +364,12 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[450px]">
+                <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[480px] pb-4">
                   <div className="p-6 border-b border-[#132a38]/5 shrink-0">
                     <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Route instructions</p>
                     <h2 className="font-serif text-2xl font-bold text-[#132a38]">Turn-by-turn highlights</h2>
                   </div>
-                  <div className="overflow-y-auto p-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
+                  <div className="overflow-y-auto px-4 pt-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
                     {flattenedSteps.map((step) => (
                       <div key={step.key} className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
