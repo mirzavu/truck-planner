@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ink: #132a38;
+    --accent: #d44b2c;
+    --accent-strong: #0a4f5f;
+  }
+
+  body {
+    @apply bg-[#f8f3e8] text-[#132a38] font-sans;
+  }
+
+  h1, h2, h3 {
+    @apply font-serif;
+  }
+}
