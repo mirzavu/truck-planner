@@ -49,6 +49,13 @@ def plan_trip_view(request: HttpRequest) -> JsonResponse:
         return JsonResponse(response_payload)
     except TripPlanningError as exc:
         return JsonResponse({"error": str(exc)}, status=502)
+    except Exception as exc:
+        import traceback
+        return JsonResponse({
+            "error": "Internal Server Error",
+            "message": str(exc),
+            "traceback": traceback.format_exc()
+        }, status=500)
 
 
 def _require_string(payload: dict, key: str) -> str:

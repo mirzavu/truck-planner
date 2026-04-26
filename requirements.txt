@@ -3,3 +3,4 @@ django-cors-headers==4.7.0
 gunicorn==23.0.0
 requests==2.32.3
 timezonefinder==6.5.9
+tzdata

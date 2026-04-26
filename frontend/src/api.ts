@@ -11,9 +11,12 @@ export async function fetchTripPlan(payload: PlanRequest): Promise<TripPlanRespo
     body: JSON.stringify(payload),
   })
 
-  const data = (await response.json()) as TripPlanResponse | { error?: string }
+  const data = (await response.json().catch(() => null)) as TripPlanResponse | { error?: string, message?: string, traceback?: string } | null
+  
   if (!response.ok) {
-    throw new Error(data && 'error' in data ? data.error || 'Failed to generate trip plan.' : 'Failed to generate trip plan.')
+    console.error('API Error:', response.status, data)
+    const message = data && 'message' in data ? data.message : (data && 'error' in data ? data.error : null)
+    throw new Error(message || `Server error (${response.status}). Please check console for details.`)
   }
 
   return data as TripPlanResponse
