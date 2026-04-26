@@ -29,6 +29,19 @@ class FakeMapsClient:
 
 
 class PlannerEngineTests(TestCase):
+    def test_naive_start_time_is_interpreted_in_trip_timezone(self) -> None:
+        planner = TripPlanner(FakeMapsClient(_short_route()))
+
+        response = planner.plan_trip(
+            current_location_query="Current",
+            pickup_location_query="Pickup",
+            dropoff_location_query="Dropoff",
+            cycle_used_hours=12,
+            start_at=datetime(2026, 4, 26, 8, 0),
+        )
+
+        self.assertTrue(response["trip"]["startAt"].startswith("2026-04-26T08:00:00-05:00"))
+
     def test_short_trip_stays_on_single_log(self) -> None:
         planner = TripPlanner(FakeMapsClient(_short_route()))
 

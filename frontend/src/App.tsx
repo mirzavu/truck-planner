@@ -5,6 +5,7 @@ import { ConfigProvider, DatePicker, Modal } from 'antd'
 import dayjs from 'dayjs'
 
 import { fetchTripPlan } from './api'
+import { LocationAutocomplete } from './components/LocationAutocomplete'
 import type { DailyLog, DutyStatus, Stop, TripPlanResponse } from './types'
 
 const demoRequest = {
@@ -27,7 +28,7 @@ function stopSummary(stop: Stop) {
   return `${stop.durationMinutes} min`
 }
 
-function RouteMap({ route, stops }: { route: TripPlanResponse['route']; stops: Stop[] }) {
+function RouteMap({ route, stops }: { route?: TripPlanResponse['route']; stops?: Stop[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerGroupRef = useRef<L.LayerGroup | null>(null)
@@ -54,7 +55,7 @@ function RouteMap({ route, stops }: { route: TripPlanResponse['route']; stops: S
   }, [])
 
   useEffect(() => {
-    if (!mapRef.current || !layerGroupRef.current) return
+    if (!mapRef.current || !layerGroupRef.current || !route || !stops) return
 
     const map = mapRef.current
     const layerGroup = layerGroupRef.current
@@ -90,10 +91,92 @@ function RouteMap({ route, stops }: { route: TripPlanResponse['route']; stops: S
 }
 
 const ROW_Y: Record<DutyStatus, number> = {
-  off_duty: 178,
-  sleeper_berth: 199,
-  driving: 220,
-  on_duty_not_driving: 241,
+  off_duty: 194,
+  sleeper_berth: 215,
+  driving: 228,
+  on_duty_not_driving: 245,
+}
+
+const STATE_ABBREVIATIONS: Record<string, string> = {
+  Alabama: 'AL',
+  Alaska: 'AK',
+  Arizona: 'AZ',
+  Arkansas: 'AR',
+  California: 'CA',
+  Colorado: 'CO',
+  Connecticut: 'CT',
+  Delaware: 'DE',
+  Florida: 'FL',
+  Georgia: 'GA',
+  Hawaii: 'HI',
+  Idaho: 'ID',
+  Illinois: 'IL',
+  Indiana: 'IN',
+  Iowa: 'IA',
+  Kansas: 'KS',
+  Kentucky: 'KY',
+  Louisiana: 'LA',
+  Maine: 'ME',
+  Maryland: 'MD',
+  Massachusetts: 'MA',
+  Michigan: 'MI',
+  Minnesota: 'MN',
+  Mississippi: 'MS',
+  Missouri: 'MO',
+  Montana: 'MT',
+  Nebraska: 'NE',
+  Nevada: 'NV',
+  'New Hampshire': 'NH',
+  'New Jersey': 'NJ',
+  'New Mexico': 'NM',
+  'New York': 'NY',
+  'North Carolina': 'NC',
+  'North Dakota': 'ND',
+  Ohio: 'OH',
+  Oklahoma: 'OK',
+  Oregon: 'OR',
+  Pennsylvania: 'PA',
+  'Rhode Island': 'RI',
+  'South Carolina': 'SC',
+  'South Dakota': 'SD',
+  Tennessee: 'TN',
+  Texas: 'TX',
+  Utah: 'UT',
+  Vermont: 'VT',
+  Virginia: 'VA',
+  Washington: 'WA',
+  'West Virginia': 'WV',
+  Wisconsin: 'WI',
+  Wyoming: 'WY',
+  'District of Columbia': 'DC',
+}
+
+function summarizeLogLocation(remarkLabel?: string) {
+  const rawLocation = remarkLabel?.split(' - ').slice(1).join(' - ').trim()
+  if (!rawLocation) return '---'
+
+  const parts = rawLocation
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/^(united states|usa|us|\d{5}(?:-\d{4})?)$/i.test(part))
+
+  const roadLike = (part: string) =>
+    /^(highway|hwy|street|st\.?|avenue|ave\.?|boulevard|blvd|road|rd\.?|drive|dr\.?|lane|ln\.?|route|rte)\b/i.test(part) ||
+    /\b(highway|hwy|street|avenue|boulevard|road|drive|lane|route)\b/i.test(part) ||
+    /^\d+([-\s]\w+)?$/.test(part)
+
+  const stateCandidate = parts.find((part) => STATE_ABBREVIATIONS[part] || /^[A-Z]{2}$/.test(part))
+  const countyCandidate = parts.find((part) => /county/i.test(part))
+  const localityCandidate = parts.find(
+    (part) => part !== stateCandidate && !/county/i.test(part) && !roadLike(part),
+  )
+
+  const baseLocation = localityCandidate || countyCandidate || parts[0] || '---'
+  if (!stateCandidate) return baseLocation
+
+  const state = STATE_ABBREVIATIONS[stateCandidate] || stateCandidate
+  return `${baseLocation}, ${state}`
 }
 
 function DailyLogSheet({ log }: { log: DailyLog }) {
@@ -112,12 +195,19 @@ function DailyLogSheet({ log }: { log: DailyLog }) {
     const points: string[] = []
     log.segments.forEach((segment, index) => {
       const getHourVal = (iso: string) => {
-        const d = new Intl.DateTimeFormat('en-US', { timeZone: log.timezone, hour12: false, hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(iso))
+        const date = new Date(iso)
+        const d = new Intl.DateTimeFormat('en-US', { timeZone: log.timezone, hour12: false, hour: '2-digit', minute: '2-digit', day: '2-digit' }).formatToParts(date)
         const map = Object.fromEntries(d.map(p => [p.type, p.value]))
-        return Number(map.hour) + Number(map.minute) / 60
+        const logDay = log.date.split('-').pop()
+
+        const hr = Number(map.hour) + Number(map.minute) / 60
+        if (map.day !== logDay) {
+          return date.getTime() > new Date(log.date).getTime() ? 24 : 0
+        }
+        return hr
       }
-      const startX = 60 + (getHourVal(segment.startAt) / 24) * 400
-      const endX = 60 + (getHourVal(segment.endAt) / 24) * 400
+      const startX = 64 + (Math.max(0, Math.min(24, getHourVal(segment.startAt))) / 24) * 392
+      const endX = 64 + (Math.max(0, Math.min(24, getHourVal(segment.endAt))) / 24) * 392
       const rowY = ROW_Y[segment.status]
 
       points.push(index === 0 ? `M ${startX.toFixed(2)} ${rowY}` : `L ${startX.toFixed(2)} ${rowY}`)
@@ -130,22 +220,25 @@ function DailyLogSheet({ log }: { log: DailyLog }) {
   const LogGraphic = (
     <div className="relative w-full aspect-[513/518] bg-contain bg-no-repeat bg-center" style={{ backgroundImage: 'url(/blank-paper-log.png)' }}>
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 513 518">
-        <text className="text-[11px] font-semibold fill-[#11242d]" x="265" y="25">{dateParts.month}</text>
-        <text className="text-[11px] font-semibold fill-[#11242d]" x="312" y="25">{dateParts.day}</text>
-        <text className="text-[11px] font-semibold fill-[#11242d]" x="359" y="25">{dateParts.year}</text>
-        <text className="text-[8px] font-semibold fill-[#11242d]" x="84" y="85">{log.totalMiles.toFixed(0)}</text>
-        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="85">{log.header.carrierName}</text>
-        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="101">{log.header.mainOfficeAddress.slice(0, 38)}</text>
-        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="116">{log.header.homeTerminalAddress.slice(0, 38)}</text>
-        <text className="text-[8px] font-semibold fill-[#11242d]" x="76" y="117">{log.header.truckNumber}/{log.header.trailerNumber}</text>
-        <text className="text-[8px] font-semibold fill-[#11242d]" x="28" y="365">{log.header.shippingDocument}</text>
+        <text className="text-[11px] font-semibold fill-[#11242d]" x="176" y="15">{dateParts.month}</text>
+        <text className="text-[11px] font-semibold fill-[#11242d]" x="223" y="15">{dateParts.day}</text>
+        <text className="text-[11px] font-semibold fill-[#11242d]" x="260" y="15">{dateParts.year}</text>
+        <text className="text-[9px] font-semibold fill-[#11242d]" x="120" y="41">{summarizeLogLocation(log.remarks[0]?.label)}</text>
+        <text className="text-[9px] font-semibold fill-[#11242d]" x="320" y="41">{summarizeLogLocation(log.remarks[log.remarks.length - 1]?.label)}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="84" y="80">{log.totalMiles.toFixed(0)}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="75">{log.header.carrierName}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="95">{log.header.mainOfficeAddress.slice(0, 38)}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="294" y="115">{log.header.homeTerminalAddress.slice(0, 38)}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="103" y="112">{log.header.truckNumber}/{log.header.trailerNumber}</text>
+        <text className="text-[8px] font-semibold fill-[#11242d]" x="28" y="375">{log.header.shippingDocument}</text>
         <path d={path} fill="none" stroke="#1670b8" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="184">{log.dutyTotals.offDuty}</text>
-        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="205">{log.dutyTotals.sleeperBerth}</text>
-        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="226">{log.dutyTotals.driving}</text>
-        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="490" y="247">{log.dutyTotals.onDutyNotDriving}</text>
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="470" y="194">{log.dutyTotals.offDuty}</text>
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="470" y="215">{log.dutyTotals.sleeperBerth}</text>
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="470" y="228">{log.dutyTotals.driving}</text>
+        <text className="text-[8px] font-bold fill-[#11242d] text-center" x="470" y="245">{log.dutyTotals.onDutyNotDriving}</text>
+        <text className="text-[8px] font-bold fill-[#d44b2c] text-center" x="470" y="272">{(log.dutyTotals.driving + log.dutyTotals.onDutyNotDriving).toFixed(1)}</text>
         {log.remarks.slice(0, 5).map((remark, i) => (
-          <text key={i} className="text-[7px] fill-[#11242d]" x="28" y={394 + i * 16}>
+          <text key={i} className="text-[7px] fill-[#11242d]" x="28" y={290 + i * 10}>
             {new Intl.DateTimeFormat('en-US', { timeZone: log.timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(remark.at))} {remark.label.slice(0, 62)}
           </text>
         ))}
@@ -163,25 +256,25 @@ function DailyLogSheet({ log }: { log: DailyLog }) {
           </div>
           <div className="text-xs text-gray-500">{log.timezone}</div>
         </header>
-        <div 
+        <div
           className="p-1.5 rounded-xl bg-gradient-to-b from-[#fff8ea] to-[#f6eacc] cursor-pointer hover:shadow-md transition-all group"
           onClick={() => setIsExpanded(true)}
         >
           <div className="relative overflow-hidden rounded-lg">
             {LogGraphic}
             <div className="absolute inset-0 bg-[#d44b2c]/0 group-hover:bg-[rgba(212,75,44,0.15)] transition-colors flex items-center justify-center">
-               <span className="opacity-0 group-hover:opacity-100 bg-white/95 text-[#132a38] text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 transform scale-95 group-hover:scale-100">
-                 Click to enlarge
-               </span>
+              <span className="opacity-0 group-hover:opacity-100 bg-white/95 text-[#132a38] text-xs font-bold px-4 py-2 rounded-full shadow-sm transition-all duration-300 transform scale-95 group-hover:scale-100">
+                Click to enlarge
+              </span>
             </div>
           </div>
         </div>
       </article>
 
-      <Modal 
-        open={isExpanded} 
-        onCancel={() => setIsExpanded(false)} 
-        footer={null} 
+      <Modal
+        open={isExpanded}
+        onCancel={() => setIsExpanded(false)}
+        footer={null}
         width="90vw"
         style={{ maxWidth: 800 }}
         centered
@@ -202,6 +295,18 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
 
   const deferredPlan = useDeferredValue(plan)
+  const tripTotals = useMemo(() => {
+    if (!deferredPlan) return { drive: 0, onDuty: 0, elapsed: 0 };
+    const drive = deferredPlan.dailyLogs.reduce((acc, log) => acc + log.dutyTotals.driving, 0);
+    const onDuty = deferredPlan.dailyLogs.reduce((acc, log) => acc + log.dutyTotals.onDutyNotDriving, 0);
+    const elapsed = dayjs(deferredPlan.trip.endAt).diff(dayjs(deferredPlan.trip.startAt), 'hour', true);
+    return {
+      drive: drive.toFixed(1),
+      onDuty: onDuty.toFixed(1),
+      elapsed: elapsed.toFixed(1)
+    };
+  }, [deferredPlan]);
+
   const flattenedSteps = useMemo(() => deferredPlan?.route.legs.flatMap((leg) => leg.steps.map((step) => ({
     ...step, key: `${leg.from}-${leg.to}-${step.instruction}-${step.distanceMiles}`, leg: `${leg.from} to ${leg.to}`,
   }))) ?? [], [deferredPlan])
@@ -217,7 +322,7 @@ export default function App() {
         pickupLocation: formData.pickupLocation,
         dropoffLocation: formData.dropoffLocation,
         cycleUsedHours: Number(formData.cycleUsedHours),
-        startAt: formData.startAt ? new Date(formData.startAt).toISOString() : undefined,
+        startAt: formData.startAt || undefined,
       })
       startTransition(() => setPlan(response))
     } catch (err) {
@@ -245,7 +350,7 @@ export default function App() {
     >
       <div className="min-h-screen bg-[#f8f3e8] text-[#132a38] font-sans p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          
+
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-gradient-to-br from-[#fff8ea] to-[#fcf3dc] p-8 rounded-[28px] border border-[#132a38]/10 shadow-sm relative overflow-hidden">
               <div className="absolute inset-4 border border-dashed border-[#0a4f5f]/20 rounded-2xl pointer-events-none" />
@@ -275,30 +380,30 @@ export default function App() {
               </div>
               <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
                 <label className="block text-sm font-semibold text-[#132a38]">Current location
-                  <input required value={formData.currentLocation} onChange={e => setFormData(c => ({...c, currentLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                  <LocationAutocomplete required value={formData.currentLocation} onChange={val => setFormData(c => ({ ...c, currentLocation: val }))} />
                 </label>
                 <label className="block text-sm font-semibold text-[#132a38]">Pickup location
-                  <input required value={formData.pickupLocation} onChange={e => setFormData(c => ({...c, pickupLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                  <LocationAutocomplete required value={formData.pickupLocation} onChange={val => setFormData(c => ({ ...c, pickupLocation: val }))} />
                 </label>
                 <label className="block text-sm font-semibold text-[#132a38]">Dropoff location
-                  <input required value={formData.dropoffLocation} onChange={e => setFormData(c => ({...c, dropoffLocation: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                  <LocationAutocomplete required value={formData.dropoffLocation} onChange={val => setFormData(c => ({ ...c, dropoffLocation: val }))} />
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <label className="block text-sm font-semibold text-[#132a38]">Cycle used
-                    <input required type="number" min="0" max="70" step="0.25" value={formData.cycleUsedHours} onChange={e => setFormData(c => ({...c, cycleUsedHours: e.target.value}))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
+                    <input required type="number" min="0" max="70" step="0.25" value={formData.cycleUsedHours} onChange={e => setFormData(c => ({ ...c, cycleUsedHours: e.target.value }))} className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#d44b2c]/50 transition-all" />
                   </label>
                   <label className="block text-sm font-semibold text-[#132a38]">Trip start
-                    <DatePicker 
+                    <DatePicker
                       className="mt-1.5 w-full rounded-xl border border-[#132a38]/20 px-4 py-2 bg-white focus:outline-none transition-all"
-                      showTime 
-                      format="MM/DD/YYYY, hh:mm A" 
+                      showTime
+                      format="MM/DD/YYYY, hh:mm A"
                       value={formData.startAt ? dayjs(formData.startAt) : null}
-                      onChange={(date) => setFormData(c => ({...c, startAt: date ? date.toISOString() : ''}))}
+                      onChange={(date) => setFormData(c => ({ ...c, startAt: date ? date.format('YYYY-MM-DDTHH:mm:ss') : '' }))}
                     />
                   </label>
                 </div>
                 <div className="pt-4 mt-auto">
-                  <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-[#d44b2c] to-[#0a4f5f] text-[#fff6ea] font-bold py-3.5 px-6 rounded-full hover:opacity-90 transition-opacity disabled:opacity-60">
+                  <button type="submit" disabled={isLoading} className="w-full bg-[#d44b2c] text-[#fff6ea] font-bold py-3.5 px-6 rounded-full hover:bg-[#b83d21] transition-all disabled:opacity-60 shadow-lg shadow-[#d44b2c]/20">
                     {isLoading ? 'Planning trip...' : 'Generate trip'}
                   </button>
                   {error && <p className="mt-4 text-sm text-red-800 bg-red-100 p-3 rounded-xl">{error}</p>}
@@ -312,10 +417,11 @@ export default function App() {
                 <h2 className="font-serif text-2xl font-bold text-[#132a38] mb-6">Dispatch snapshot</h2>
                 {deferredPlan ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Trip duration</span><strong className="text-2xl font-bold text-[#132a38]">{tripTotals.elapsed}</strong></div>
+                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Drive hours</span><strong className="text-2xl font-bold text-[#132a38]">{tripTotals.drive}</strong></div>
+                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">On-duty hours</span><strong className="text-2xl font-bold text-[#132a38]">{tripTotals.onDuty}</strong></div>
                       <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Miles</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalDistanceMiles}</strong></div>
-                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Drive hours</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalDriveHours}</strong></div>
-                      <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">On-duty hours</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.totalOnDutyHours}</strong></div>
                       <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4"><span className="text-xs text-gray-500 block mb-1">Cycle end</span><strong className="text-2xl font-bold text-[#132a38]">{deferredPlan.trip.cycleHoursEnd}</strong></div>
                     </div>
                     <div className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -329,11 +435,9 @@ export default function App() {
                 )}
               </div>
 
-              {deferredPlan && (
-                <div className="bg-white/80 backdrop-blur-sm p-4 rounded-[24px] border border-[#132a38]/10 shadow-sm flex-1 min-h-[300px]">
-                  <RouteMap route={deferredPlan.route} stops={deferredPlan.stops} />
-                </div>
-              )}
+              <div className="bg-white/80 backdrop-blur-sm p-4 rounded-[24px] border border-[#132a38]/10 shadow-sm flex-1 min-h-[300px]">
+                <RouteMap route={deferredPlan?.route} stops={deferredPlan?.stops} />
+              </div>
             </div>
           </section>
 

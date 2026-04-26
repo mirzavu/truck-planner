@@ -230,6 +230,7 @@ class TripPlanner:
             [current_location, pickup_location, dropoff_location]
         )
         timezone_name = self._resolve_timezone(current_location)
+        start_at = self._normalize_start_at(start_at, timezone_name)
         interpolator = RouteInterpolator(route.geometry, route.total_distance_miles)
         schedule = self._build_schedule(
             current_location=current_location,
@@ -618,6 +619,12 @@ class TripPlanner:
             return timezone_name
         timezone_name = self.timezone_finder.closest_timezone_at(lat=location.lat, lng=location.lng)
         return timezone_name or "UTC"
+
+    def _normalize_start_at(self, start_at: datetime, timezone_name: str) -> datetime:
+        zone = ZoneInfo(timezone_name)
+        if start_at.tzinfo is None:
+            return start_at.replace(tzinfo=zone)
+        return start_at.astimezone(zone)
 
     def _fill_off_duty_gaps(
         self,

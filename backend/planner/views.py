@@ -77,6 +77,4 @@ def _parse_start_at(raw_value: str | None) -> datetime:
     except ValueError as exc:
         raise ValueError("startAt must be a valid ISO datetime.") from exc
 
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+    return parsed
