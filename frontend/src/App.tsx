@@ -255,7 +255,10 @@ function DailyLogSheet({ log }: { log: DailyLog }) {
             <p className="text-[10px] font-bold text-[#0a4f5f] uppercase tracking-wider mb-1">Daily log</p>
             <h3 className="font-serif text-[#132a38] text-xl font-bold">{log.date}</h3>
           </div>
-          <div className="text-xs text-gray-500">{log.timezone}</div>
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Driven</span>
+            <span className="text-sm font-bold text-[#132a38]">{log.totalMiles.toFixed(0)} <span className="text-[10px] text-gray-500 font-medium">mi</span></span>
+          </div>
         </header>
         <div
           className="p-1.5 rounded-xl bg-gradient-to-b from-[#fff8ea] to-[#f6eacc] cursor-pointer hover:shadow-md transition-all group"
