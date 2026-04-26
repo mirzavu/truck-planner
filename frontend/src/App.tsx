@@ -6,6 +6,7 @@ import dayjs from 'dayjs'
 
 import { fetchTripPlan } from './api'
 import { LocationAutocomplete } from './components/LocationAutocomplete'
+import { TurnByTurnPanel } from './components/TurnByTurnPanel'
 import type { DailyLog, DutyStatus, Stop, TripPlanResponse } from './types'
 
 const demoRequest = {
@@ -307,10 +308,6 @@ export default function App() {
     };
   }, [deferredPlan]);
 
-  const flattenedSteps = useMemo(() => deferredPlan?.route.legs.flatMap((leg) => leg.steps.map((step) => ({
-    ...step, key: `${leg.from}-${leg.to}-${step.instruction}-${step.distanceMiles}`, leg: `${leg.from} to ${leg.to}`,
-  }))) ?? [], [deferredPlan])
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
@@ -468,26 +465,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-sm rounded-[24px] border border-[#132a38]/10 shadow-sm flex flex-col overflow-hidden h-[480px] pb-4">
-                  <div className="p-6 border-b border-[#132a38]/5 shrink-0">
-                    <p className="text-[#0a4f5f] text-[10px] font-bold uppercase tracking-widest mb-1">Route instructions</p>
-                    <h2 className="font-serif text-2xl font-bold text-[#132a38]">Turn-by-turn highlights</h2>
-                  </div>
-                  <div className="overflow-y-auto px-4 pt-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-gray-300">
-                    {flattenedSteps.map((step) => (
-                      <div key={step.key} className="bg-[#fffcf5] border border-[#132a38]/10 rounded-xl p-4 flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <strong className="block text-[#132a38] text-sm">{step.instruction}</strong>
-                          <p className="text-xs text-gray-500 truncate mt-0.5">{step.leg}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="block text-sm font-semibold text-[#132a38]">{step.distanceMiles} mi</span>
-                          <span className="block text-xs text-gray-500">{step.durationMinutes} min</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <TurnByTurnPanel legs={deferredPlan.route.legs} />
               </section>
 
               <section className="bg-white/80 backdrop-blur-sm p-6 rounded-[24px] border border-[#132a38]/10 shadow-sm">
