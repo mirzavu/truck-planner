@@ -2,9 +2,9 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/config/wsgi.py",
+      "src": "api/index.py",
       "use": "@vercel/python",
-      "config": { "runtime": "python3.9" }
+      "config": { "runtime": "python3.12" }
     },
     {
       "src": "frontend/package.json",
@@ -12,13 +12,7 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "backend/config/wsgi.py"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "frontend/$1"
-    }
+    { "source": "/api/(.*)", "destination": "api/index.py" },
+    { "source": "/(.*)", "destination": "frontend/$1" }
   ]
 }
