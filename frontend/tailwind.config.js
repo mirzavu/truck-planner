@@ -7,11 +7,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        serif: ['Fraunces', 'serif'],
-        sans: ['"Space Grotesk"', 'sans-serif'],
+        serif: ['ui-serif', 'Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+        sans: ['ui-sans-serif', 'system-ui', 'sans-serif'],
       },
     },
   },
   plugins: [],
 }
-
